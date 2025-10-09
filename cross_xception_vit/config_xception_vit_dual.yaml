@@ -1,0 +1,21 @@
+
+
+# --- 訓練相關參數 ---
+training:
+  lr: 0.00001
+  weight-decay: 0.01
+  bs: 32
+  scheduler: 'cosine'
+  frames-per-video: 30
+
+# --- 模型相關參數 ---
+model:
+  image-size: 299
+  num-classes: 1
+  
+  # --- Vision Transformer 相關參數 ---
+  vit:
+    dim: 1024
+    depth: 6
+    heads: 8
+    mlp-dim: 2048
