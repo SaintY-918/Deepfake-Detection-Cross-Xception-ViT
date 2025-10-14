@@ -1,0 +1,38 @@
+
+
+# --- 訓練相關參數 ---
+training:
+  lr: 0.00001
+  weight-decay: 0.01
+  bs: 16  # 由於模型更複雜，建議可以先將 batch size 減半以避免 OOM
+  scheduler: 'cosine'
+  frames-per-video: 30
+
+# --- 模型相關參數 ---
+model:
+  image-size: 299
+  num-classes: 1
+
+  # S-Branch (Small/Deep features)
+  s-branch:
+    cnn_channels: 2048  # Xception out_indices=4
+    dim: 1024
+    depth: 4
+    heads: 8
+    dim_head: 64
+    mlp_dim: 2048
+
+  # L-Branch (Large/Shallow features)
+  l-branch:
+    cnn_channels: 256  # Xception out_indices=2
+    dim: 512
+    depth: 4
+    heads: 8
+    dim_head: 64
+    mlp_dim: 1024
+  
+  # Cross-Attention Transformer
+  cross-attention:
+    depth: 2
+    heads: 8
+    dim_head: 64
