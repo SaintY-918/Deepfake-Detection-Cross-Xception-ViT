@@ -11,36 +11,25 @@ import math
 import collections
 import torch.optim as optim
 
-# === 修改 1：從新的 model.py 匯入新模型 ===
-# 假設你在 model.py 中將類別命名為 CrossXceptionViTCrossAttn
 from model import CrossXceptionViTCrossAttn 
 from deepfakes_dataset import DeepFakesDataset, collate_fn_filter_none
 from utils import get_n_params, check_correct
 
 def read_frames_from_videos(video_paths, frames_per_video, label):
-    """
-    從影片資料夾列表中讀取影格。
-    """
     all_frames = []
     for video_path in video_paths:
         frame_files = sorted([os.path.join(video_path, f) for f in os.listdir(video_path)])
         if not frame_files:
             continue
-        
         step = len(frame_files) // frames_per_video if len(frame_files) > frames_per_video else 1
         sampled_files = frame_files[::step][:frames_per_video]
-        
         for frame_path in sampled_files:
             all_frames.append((frame_path, float(label)))
     return all_frames
 
-# --- 主程式 ---
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="訓練 Cross-Xception-ViT 的 Cross-Attention 雙分支版")
-    
-    # === 修改 2：更改預設設定檔路徑為 architecture.yaml ===
     parser.add_argument('--config', type=str, default='architecture.yaml', help="設定檔路徑")
-    
     parser.add_argument('--dataset', type=str, default='All', help="偽造資料集類型")
     parser.add_argument('--workers', default=8, type=int)
     parser.add_argument('--num_epochs', default=100, type=int)
@@ -62,40 +51,31 @@ if __name__ == "__main__":
     print("--- 準備資料集 (1:1 平衡策略) ---")
     frames_per_video = config['training']['frames-per-video']
 
-    # --- 訓練集平衡邏輯 (維持不變) ---
+    # --- 資料準備邏輯 (維持不變) ---
     fake_types_in_train = [d for d in os.listdir(TRAINING_DIR) if os.path.isdir(os.path.join(TRAINING_DIR, d)) and d != 'Original']
     if opt.dataset != 'All':
         fake_types_in_train = [opt.dataset]
-        
     num_real_train_videos = len(os.listdir(os.path.join(TRAINING_DIR, 'Original')))
     total_real_train_frames = num_real_train_videos * frames_per_video
-    
     num_fake_train_videos = sum(len(os.listdir(os.path.join(TRAINING_DIR, fake_type))) for fake_type in fake_types_in_train)
     frames_per_fake_train = max(1, round(total_real_train_frames / num_fake_train_videos)) if num_fake_train_videos > 0 else 0
-    
     train_paths = []
     original_train_videos = [os.path.join(TRAINING_DIR, 'Original', v) for v in os.listdir(os.path.join(TRAINING_DIR, 'Original'))]
     train_paths.extend(read_frames_from_videos(original_train_videos, frames_per_video, 0.0))
-    
     for fake_type in fake_types_in_train:
         fake_video_paths = [os.path.join(TRAINING_DIR, fake_type, v) for v in os.listdir(os.path.join(TRAINING_DIR, fake_type))]
         train_paths.extend(read_frames_from_videos(fake_video_paths, frames_per_fake_train, 1.0))
-
-    # --- 驗證集平衡邏輯 (維持不變) ---
+    
     fake_types_in_val = [d for d in os.listdir(VALIDATION_DIR) if os.path.isdir(os.path.join(VALIDATION_DIR, d)) and d != 'Original']
     if opt.dataset != 'All':
         fake_types_in_val = [opt.dataset]
-
     num_real_val_videos = len(os.listdir(os.path.join(VALIDATION_DIR, 'Original')))
     total_real_val_frames = num_real_val_videos * frames_per_video
-
     num_fake_val_videos = sum(len(os.listdir(os.path.join(VALIDATION_DIR, fake_type))) for fake_type in fake_types_in_val)
     frames_per_fake_val = max(1, round(total_real_val_frames / num_fake_val_videos)) if num_fake_val_videos > 0 else 0
-
     val_paths = []
     original_val_videos = [os.path.join(VALIDATION_DIR, 'Original', v) for v in os.listdir(os.path.join(VALIDATION_DIR, 'Original'))]
     val_paths.extend(read_frames_from_videos(original_val_videos, frames_per_video, 0.0))
-    
     for fake_type in fake_types_in_val:
         fake_video_paths = [os.path.join(VALIDATION_DIR, fake_type, v) for v in os.listdir(os.path.join(VALIDATION_DIR, fake_type))]
         val_paths.extend(read_frames_from_videos(fake_video_paths, frames_per_fake_val, 1.0))
@@ -106,7 +86,6 @@ if __name__ == "__main__":
     print("訓練集統計:", collections.Counter(label for _, label in train_paths))
     print("驗證集統計:", collections.Counter(label for _, label in val_paths))
     
-    # === 修改 3：初始化新的 Cross-Attention 模型 ===
     model = CrossXceptionViTCrossAttn(config, pretrained=True)
     print("--- 已載入 Cross-Attention 雙分支模型 (CrossXceptionViTCrossAttn) ---")
     
@@ -137,7 +116,6 @@ if __name__ == "__main__":
     not_improved_loss = 0
     previous_loss = math.inf
     
-    # --- 訓練迴圈 (維持不變) ---
     for t in range(opt.num_epochs):
         if not_improved_loss >= opt.patience:
             print(f"Early stopping at epoch {t+1}")
@@ -193,7 +171,6 @@ if __name__ == "__main__":
             if not os.path.exists(MODELS_PATH):
                 os.makedirs(MODELS_PATH)
             
-            # === 修改 4：更改儲存的模型名稱，以方便區分 ===
             model_save_path = os.path.join(MODELS_PATH, f"cross_attn_xception_vit_best_{opt.dataset}.pth")
             torch.save(model.state_dict(), model_save_path)
             print(f"Validation loss improved. Saving best model to {model_save_path}")

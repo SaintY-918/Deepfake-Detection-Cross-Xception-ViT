@@ -1,38 +1,37 @@
 
-
-# --- 訓練相關參數 ---
 training:
-  lr: 0.00001
-  weight-decay: 0.01
-  bs: 16  # 由於模型更複雜，建議可以先將 batch size 減半以避免 OOM
-  scheduler: 'cosine'
+  lr: 0.00001          # 由於模型變輕，使用稍高的穩定學習率
+  weight-decay: 0.001    # 保留適中的權重衰減以輔助正則化
+  bs: 16              # 模型變輕，可以使用較大的批次大小來穩定梯度並加速
+  scheduler: 'cosine'   # 使用平滑下降的 Cosine 排程器
   frames-per-video: 30
 
-# --- 模型相關參數 ---
 model:
   image-size: 299
   num-classes: 1
+  depth: 2              # 【核心】Multi-Scale Encoder 重複執行 2 次，實現深融合
+  dropout: 0.15         # 採用原作者建議的 Dropout 率來防止過擬合
 
   # S-Branch (Small/Deep features)
   s-branch:
-    cnn_channels: 2048  # Xception out_indices=4
-    dim: 1024
-    depth: 4
+    cnn_channels: 2048   # Xception out_indices=4
+    dim: 256             # 【核心】大幅降低維度 (1024 -> 256)
+    depth: 1             # 單一 Transformer Encoder 的深度
     heads: 8
     dim_head: 64
-    mlp_dim: 2048
+    mlp_dim: 512         # MLP 維度也相應降低
 
   # L-Branch (Large/Shallow features)
   l-branch:
-    cnn_channels: 256  # Xception out_indices=2
-    dim: 512
-    depth: 4
+    cnn_channels: 256    # Xception out_indices=2
+    dim: 256             # 【核心】大幅降低維度 (512 -> 256)，與 S-Branch 對齊
+    depth: 1             # 單一 Transformer Encoder 的深度
     heads: 8
     dim_head: 64
-    mlp_dim: 1024
+    mlp_dim: 512         # MLP 維度也相應降低
   
   # Cross-Attention Transformer
   cross-attention:
-    depth: 2
+    depth: 1             # Cross-Attention 的深度
     heads: 8
     dim_head: 64

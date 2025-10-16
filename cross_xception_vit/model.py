@@ -1,12 +1,10 @@
-# cross_xception_vit/model.py (修正版)
 
 import torch
 from torch import nn
 from einops import rearrange, repeat
-from einops.layers.torch import Rearrange
 import timm
 
-# --- Helper Classes (與之前相同，保持不變) ---
+# --- Helper Classes ---
 
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
@@ -74,16 +72,14 @@ class Transformer(nn.Module):
             x = ff(x) + x
         return x
 
-# === 核心修正：CrossTransformer ===
 class CrossTransformer(nn.Module):
     def __init__(self, sm_dim, lg_dim, depth, heads, dim_head, dropout):
         super().__init__()
         self.layers = nn.ModuleList([])
         for _ in range(depth):
-            # 新增：用於維度投射的 Linear 層
             self.layers.append(nn.ModuleList([
-                nn.Linear(lg_dim, sm_dim), # 將 L-Branch 維度(512)投射到 S-Branch 維度(1024)
-                nn.Linear(sm_dim, lg_dim), # 將 S-Branch 維度(1024)投射到 L-Branch 維度(512)
+                nn.Linear(lg_dim, sm_dim) if lg_dim != sm_dim else nn.Identity(),
+                nn.Linear(sm_dim, lg_dim) if sm_dim != lg_dim else nn.Identity(),
                 PreNorm(sm_dim, Attention(sm_dim, heads=heads, dim_head=dim_head, dropout=dropout)),
                 PreNorm(lg_dim, Attention(lg_dim, heads=heads, dim_head=dim_head, dropout=dropout)),
             ]))
@@ -92,25 +88,41 @@ class CrossTransformer(nn.Module):
         (sm_cls, sm_patch_tokens), (lg_cls, lg_patch_tokens) = map(lambda t: (t[:, :1], t[:, 1:]), (sm_tokens, lg_tokens))
 
         for proj_lg_to_sm, proj_sm_to_lg, sm_attend_lg, lg_attend_sm in self.layers:
-            # 1. S-Branch 關注 L-Branch
-            # 先將 L-Branch 的 patch tokens 投射到 S-Branch 的維度
             lg_context = proj_lg_to_sm(lg_patch_tokens)
             sm_cls = sm_attend_lg(sm_cls, context=lg_context) + sm_cls
-
-            # 2. L-Branch 關注 S-Branch
-            # 先將 S-Branch 的 patch tokens 投射到 L-Branch 的維度
             sm_context = proj_sm_to_lg(sm_patch_tokens)
             lg_cls = lg_attend_sm(lg_cls, context=sm_context) + lg_cls
         
         return torch.cat((sm_cls, sm_patch_tokens), dim=1), torch.cat((lg_cls, lg_patch_tokens), dim=1)
 
-# --- 主模型架構 (維持不變) ---
+# --- MultiScaleEncoder (從原作者模型中引入) ---
+class MultiScaleEncoder(nn.Module):
+    def __init__(self, sm_dim, lg_dim, depth, sm_enc_params, lg_enc_params, cross_attn_params, dropout):
+        super().__init__()
+        self.layers = nn.ModuleList([])
+        for _ in range(depth):
+            self.layers.append(nn.ModuleList([
+                Transformer(dim=sm_dim, dropout=dropout, **sm_enc_params),
+                Transformer(dim=lg_dim, dropout=dropout, **lg_enc_params),
+                CrossTransformer(sm_dim=sm_dim, lg_dim=lg_dim, dropout=dropout, **cross_attn_params)
+            ]))
+
+    def forward(self, sm_tokens, lg_tokens):
+        for sm_enc, lg_enc, cross_attend in self.layers:
+            sm_tokens = sm_enc(sm_tokens)
+            lg_tokens = lg_enc(lg_tokens)
+            sm_tokens, lg_tokens = cross_attend(sm_tokens, lg_tokens)
+        return sm_tokens, lg_tokens
+
+# --- 主模型架構 ---
 class CrossXceptionViTCrossAttn(nn.Module):
     def __init__(self, config, pretrained=True):
         super().__init__()
-        sm_conf = config['model']['s-branch']
-        lg_conf = config['model']['l-branch']
-        cross_attn_conf = config['model']['cross-attention']
+        model_conf = config['model']
+        sm_conf = model_conf['s-branch']
+        lg_conf = model_conf['l-branch']
+        cross_attn_conf = model_conf['cross-attention']
+        dropout = model_conf.get('dropout', 0.)
         
         self.cnn_s = timm.create_model('xception', pretrained=pretrained, features_only=True, out_indices=(4,))
         self.cnn_l = timm.create_model('xception', pretrained=pretrained, features_only=True, out_indices=(2,))
@@ -120,38 +132,40 @@ class CrossXceptionViTCrossAttn(nn.Module):
 
         self.cls_token_s = nn.Parameter(torch.randn(1, 1, sm_conf['dim']))
         self.cls_token_l = nn.Parameter(torch.randn(1, 1, lg_conf['dim']))
+        
+        self.multi_scale_encoder = MultiScaleEncoder(
+            depth=model_conf['depth'],
+            sm_dim=sm_conf['dim'],
+            lg_dim=lg_conf['dim'],
+            sm_enc_params=dict(depth=sm_conf['depth'], heads=sm_conf['heads'], dim_head=sm_conf['dim_head'], mlp_dim=sm_conf['mlp_dim']),
+            lg_enc_params=dict(depth=lg_conf['depth'], heads=lg_conf['heads'], dim_head=lg_conf['dim_head'], mlp_dim=lg_conf['mlp_dim']),
+            cross_attn_params=dict(depth=cross_attn_conf['depth'], heads=cross_attn_conf['heads'], dim_head=cross_attn_conf['dim_head']),
+            dropout=dropout
+        )
 
-        self.transformer_s = Transformer(dim=sm_conf['dim'], depth=sm_conf['depth'], heads=sm_conf['heads'], 
-                                         dim_head=sm_conf['dim_head'], mlp_dim=sm_conf['mlp_dim'])
-        self.transformer_l = Transformer(dim=lg_conf['dim'], depth=lg_conf['depth'], heads=lg_conf['heads'], 
-                                         dim_head=lg_conf['dim_head'], mlp_dim=lg_conf['mlp_dim'])
-
-        self.cross_transformer = CrossTransformer(sm_dim=sm_conf['dim'], lg_dim=lg_conf['dim'], 
-                                                  depth=cross_attn_conf['depth'], heads=cross_attn_conf['heads'], 
-                                                  dim_head=cross_attn_conf['dim_head'], dropout=0.)
-
-        self.mlp_head_s = nn.Sequential(nn.LayerNorm(sm_conf['dim']), nn.Linear(sm_conf['dim'], config['model']['num-classes']))
-        self.mlp_head_l = nn.Sequential(nn.LayerNorm(lg_conf['dim']), nn.Linear(lg_conf['dim'], config['model']['num-classes']))
+        self.mlp_head_s = nn.Sequential(nn.LayerNorm(sm_conf['dim']), nn.Linear(sm_conf['dim'], model_conf['num-classes']))
+        self.mlp_head_l = nn.Sequential(nn.LayerNorm(lg_conf['dim']), nn.Linear(lg_conf['dim'], model_conf['num-classes']))
 
     def forward(self, img):
+        # 初始 Tokenization
         feat_s = self.cnn_s(img)[0]
         tokens_s = rearrange(feat_s, 'b c h w -> b (h w) c')
         tokens_s = self.projection_s(tokens_s)
-        b, n, _ = tokens_s.shape
+        b = tokens_s.shape[0]
         cls_s = repeat(self.cls_token_s, '() n d -> b n d', b=b)
         tokens_s = torch.cat((cls_s, tokens_s), dim=1)
-        tokens_s = self.transformer_s(tokens_s)
 
         feat_l = self.cnn_l(img)[0]
         tokens_l = rearrange(feat_l, 'b c h w -> b (h w) c')
         tokens_l = self.projection_l(tokens_l)
-        b, n, _ = tokens_l.shape
+        b = tokens_l.shape[0]
         cls_l = repeat(self.cls_token_l, '() n d -> b n d', b=b)
         tokens_l = torch.cat((cls_l, tokens_l), dim=1)
-        tokens_l = self.transformer_l(tokens_l)
 
-        sm_tokens, lg_tokens = self.cross_transformer(tokens_s, tokens_l)
+        # 進入 Multi-Scale Encoder 進行多輪融合
+        sm_tokens, lg_tokens = self.multi_scale_encoder(tokens_s, tokens_l)
 
+        # MLP Heads
         sm_cls, lg_cls = sm_tokens[:, 0], lg_tokens[:, 0]
         sm_logits = self.mlp_head_s(sm_cls)
         lg_logits = self.mlp_head_l(lg_cls)
