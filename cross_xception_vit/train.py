@@ -1,4 +1,5 @@
-# train.py
+
+# train.py (已加入 TensorBoard 可視化)
 
 import torch
 import torch.nn as nn
@@ -10,6 +11,10 @@ from torch.cuda.amp import GradScaler, autocast
 import math
 import collections
 import torch.optim as optim
+import time # 用於建立獨特的日誌名稱
+
+# 導入 TensorBoard 的 SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from model import CrossXceptionViTCrossAttn 
 from deepfakes_dataset import DeepFakesDataset, collate_fn_filter_none
@@ -43,6 +48,12 @@ if __name__ == "__main__":
     with open(opt.config, 'r') as ymlfile:
         config = yaml.safe_load(ymlfile)
 
+    # 初始化 TensorBoard Writer
+    # 建立一個以時間戳命名的獨特日誌資料夾
+    log_dir = os.path.join("runs", f"bs{config['training']['bs']}_lr{config['training']['lr']}_{time.strftime('%Y%m%d-%H%M%S')}")
+    writer = SummaryWriter(log_dir)
+    print(f"--- TensorBoard 日誌將儲存到: {log_dir} ---")
+
     MODELS_PATH = "models"
     BASE_DIR = '../prepared_dataset/'
     TRAINING_DIR = os.path.join(BASE_DIR, "training_set")
@@ -50,8 +61,8 @@ if __name__ == "__main__":
     
     print("--- 準備資料集 (1:1 平衡策略) ---")
     frames_per_video = config['training']['frames-per-video']
+    
 
-    # --- 資料準備邏輯 (維持不變) ---
     fake_types_in_train = [d for d in os.listdir(TRAINING_DIR) if os.path.isdir(os.path.join(TRAINING_DIR, d)) and d != 'Original']
     if opt.dataset != 'All':
         fake_types_in_train = [opt.dataset]
@@ -79,7 +90,7 @@ if __name__ == "__main__":
     for fake_type in fake_types_in_val:
         fake_video_paths = [os.path.join(VALIDATION_DIR, fake_type, v) for v in os.listdir(os.path.join(VALIDATION_DIR, fake_type))]
         val_paths.extend(read_frames_from_videos(fake_video_paths, frames_per_fake_val, 1.0))
-
+    
     train_samples = len(train_paths)
     val_samples = len(val_paths)
     print(f"訓練樣本數 (影格): {train_samples}, 驗證樣本數 (影格): {val_samples}")
@@ -90,16 +101,22 @@ if __name__ == "__main__":
     print("--- 已載入 Cross-Attention 雙分支模型 (CrossXceptionViTCrossAttn) ---")
     
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['training']['lr'], weight_decay=config['training']['weight-decay'])
-
+    
     scheduler_name = config['training'].get('scheduler', 'cosine')
+
     if scheduler_name.lower() == 'cosine':
         t_max = config['training'].get('t_max', opt.num_epochs) 
         eta_min = config['training'].get('eta_min', 1e-6)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=t_max, eta_min=eta_min)
         print(f"--- 使用 CosineAnnealingLR 排程器 (T_max={t_max}, eta_min={eta_min}) ---")
+    elif scheduler_name.lower() == 'steplr':
+        step_size = config['training'].get('step-size', 15)
+        gamma = config['training'].get('gamma', 0.1)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
+        print(f"--- 使用 StepLR 排程器 (step_size={step_size}, gamma={gamma}) ---")
     else:
         scheduler = None
-        print("--- 未設定 Scheduler ---")
+        print("--- 未設定或設定了無效的 Scheduler，將不使用學習率排程 ---")
     
     scaler = GradScaler()
     loss_fn = torch.nn.BCEWithLogitsLoss()
@@ -113,6 +130,16 @@ if __name__ == "__main__":
     print("模型總參數數量:", get_n_params(model))
     model.to(device)
     
+    # 寫入模型架構圖
+    try:
+        # 從 DataLoader 取一個批次的資料
+        images_batch, _ = next(iter(dl))
+        # 將範例資料和模型傳入 add_graph
+        writer.add_graph(model, images_batch.to(device))
+        print("--- 模型架構圖已成功寫入 TensorBoard ---")
+    except Exception as e:
+        print(f"無法寫入模型架構圖 (這通常不影響訓練): {e}")
+
     not_improved_loss = 0
     previous_loss = math.inf
     
@@ -127,12 +154,17 @@ if __name__ == "__main__":
         for index, (images, labels) in enumerate(loop):
             if not images.numel(): continue
             images, labels = images.to(device), labels.unsqueeze(1).to(device)
+            
+            optimizer.zero_grad()
             with autocast():
                 y_pred = model(images)
                 loss = loss_fn(y_pred, labels)
             
-            optimizer.zero_grad()
             scaler.scale(loss).backward()
+            
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            
             scaler.step(optimizer)
             scaler.update()
             
@@ -161,8 +193,20 @@ if __name__ == "__main__":
         avg_acc = train_correct / train_samples if train_samples > 0 else 0
         avg_val_loss = total_val_loss / len(val_dl) if len(val_dl) > 0 else 0
         avg_val_acc = val_correct / val_samples if val_samples > 0 else 0
-        
         current_lr = scheduler.get_last_lr()[0] if scheduler else config['training']['lr']
+        
+        # 在每個 Epoch 結束時寫入指標
+        writer.add_scalar('LearningRate', current_lr, t + 1)
+        # 將訓練和驗證指標分組
+        writer.add_scalars('Loss', {
+            'train': avg_loss,
+            'validation': avg_val_loss
+        }, t + 1)
+        writer.add_scalars('Accuracy', {
+            'train': avg_acc,
+            'validation': avg_val_acc
+        }, t + 1)
+        
         print(f"EPOCH #{t+1}/{opt.num_epochs} -> loss: {avg_loss:.4f}, acc: {avg_acc:.4f} || val_loss: {avg_val_loss:.4f}, val_acc: {avg_val_acc:.4f} || lr: {current_lr:.6f}")
         
         if avg_val_loss < previous_loss:
@@ -177,3 +221,7 @@ if __name__ == "__main__":
         else:
             not_improved_loss += 1
             print(f"Validation loss did not improve. Counter: {not_improved_loss}/{opt.patience}")
+
+    # 訓練結束後關閉 Writer
+    writer.close()
+    print("--- TensorBoard 日誌寫入完畢 ---")

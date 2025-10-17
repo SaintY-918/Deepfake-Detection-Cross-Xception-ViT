@@ -9,15 +9,15 @@ import pandas as pd
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score, precision_score, recall_score
 import collections
 
-# === 核心修改 1：從 model.py 匯入新的 Cross-Attention 模型 ===
+# 匯入新的 Cross-Attention 模型 
 from model import CrossXceptionViTCrossAttn 
 from deepfakes_dataset import DeepFakesDataset, collate_fn_filter_none
 
-# --- 主程式 ---
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="測試 Cross-Xception-ViT 的 Cross-Attention 雙分支版")
     
-    # === 核心修改 2：預設載入新的 architecture.yaml 設定檔 ===
+    
     parser.add_argument('--config', type=str, default='architecture.yaml', help="設定檔路徑")
     
     # 其他參數
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     with open(opt.config, 'r') as ymlfile:
         config = yaml.safe_load(ymlfile)
 
-    # === 核心修改 3：初始化 Cross-Attention 模型 ===
+    # 初始化 Cross-Attention 模型 
     model = CrossXceptionViTCrossAttn(config, pretrained=False)
     
     # 載入對應的權重檔案
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             avg_pred = sum(video_preds) / len(video_preds) if video_preds else 0.5
             results.append({'video': video_name, 'label': true_label, 'pred': avg_pred, 'type': fake_type})
 
-    # --- 報告生成邏輯 ---
+    # 報告生成邏輯 
     df = pd.DataFrame(results)
     
     all_fake_types = df[df['label'] == 1]['type'].unique()

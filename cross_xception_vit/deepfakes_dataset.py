@@ -1,4 +1,4 @@
-# deepfakes_dataset.py (最終修正版 - 同時修正 target_size 和 interpolation)
+
 
 import torch
 from torch.utils.data import Dataset
@@ -18,7 +18,6 @@ def get_train_transforms(image_size):
         A.GaussNoise(p=0.3),
         A.HorizontalFlip(p=0.5),
 
-        # --- 核心修正 #2：將 interpolation_down/up 改為單一 interpolation ---
         A.OneOf([
             IsotropicResize(target_size=image_size, interpolation=cv2.INTER_AREA),
             IsotropicResize(target_size=image_size, interpolation=cv2.INTER_LINEAR),
@@ -38,7 +37,7 @@ def get_val_transforms(image_size):
     定義驗證時使用的轉換流程。
     """
     return A.Compose([
-        # --- 核心修正 #2：將 interpolation_down/up 改為單一 interpolation ---
+        
         IsotropicResize(target_size=image_size, interpolation=cv2.INTER_AREA),
         A.PadIfNeeded(min_height=image_size, min_width=image_size, border_mode=cv2.BORDER_CONSTANT),
         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -53,7 +52,7 @@ class DeepFakesDataset(Dataset):
             self.transform = get_train_transforms(image_size)
         else:
             self.transform = get_val_transforms(image_size)
-        print(f"--- Dataset in '{self.mode}' mode initialized with {len(self.data)} samples. ---")
+        # print(f"--- Dataset in '{self.mode}' mode initialized with {len(self.data)} samples. ---")
 
     def __len__(self):
         return len(self.data)
