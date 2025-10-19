@@ -1,0 +1,28 @@
+# 訓練相關參數 
+training:
+  lr: 0.0001           # 學習率 (1e-4)
+  weight-decay: 0.0001   
+  bs: 16               
+  scheduler: 'steplr'    # StepLR 排程器
+  gamma: 0.1           # 每次衰減乘以 0.1
+  step-size: 10        # 每 10 個 epoch 衰減一次
+  frames-per-video: 30
+
+# 模型相關參數  
+model:
+  image-size: 299
+  num-classes: 1
+  dropout: 0.20         
+
+  # 單分支 Xception-ViT 
+  transformer:
+    cnn_out_channels: 2048 # Xception 'out_indices=(4,)' 的輸出通道
+    pool_size: 10          # CNN 特徵圖池化後的尺寸 (10x10)
+    patch_size: 2          # ViT 的 patch 大小 (在 10x10 特徵圖上)
+    
+    # ViT 參數
+    dim: 512               # Transformer 維度
+    depth: 4               # Transformer 層數
+    heads: 8               # 注意力頭數量
+    dim_head: 64           # 每個頭的維度
+    mlp_dim: 1024          # FeedForward 隱藏層維度
