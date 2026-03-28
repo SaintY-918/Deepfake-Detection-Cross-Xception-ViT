@@ -1,12 +1,13 @@
-## 環境安裝 (Installation)
+# Combining EfficientNet and Vision Transformers for Video Deepfake Detection
 
-本專案使用 Python 3.12+ 與虛擬環境。主要依賴套件如下：
+本專案實作了一種結合 **CNN (Xception/EfficientNet)** 與 **Vision Transformers (ViT)** 的混合架構，專門用於偵測偽造影片（Deepfake）。專案支援雙分支 Cross-Attention 機制，能有效融合不同尺度的臉部特徵。
 
-| 套件名稱 | 版本 | 說明 |
-| :--- | :--- | :--- |
-| PyTorch | 2.2.2 | 深度學習核心框架 |
-| Timm | 0.6.5 | 預訓練模型庫 (Xception/EfficientNet) |
-| Albumentations | 1.3.0 | 影像增強工具 |
-| Einops | 0.8.1 | 張量維度變換處理 |
-| Facenet-pytorch| 2.6.0 | MTCNN 臉部偵測器 |
-| Decord | 0.6.0 | 高速影片解碼 |
+---
+
+## 1. 環境設定 (Environment Setup)
+
+本專案建議在 **Windows WSL (Ubuntu 24.04)** 環境下執行，並使用專屬的虛擬環境。
+
+### 虛擬環境路徑
+- **Environment**: `/home/saint/torch_env`
+- **Python**: 3.12+
