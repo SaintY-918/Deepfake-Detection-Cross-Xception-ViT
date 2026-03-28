@@ -8,6 +8,12 @@
 
 本專案建議在 **Windows WSL (Ubuntu 24.04)** 環境下執行，並使用專屬的虛擬環境。
 
-### 虛擬環境路徑
-- **Environment**: `/home/saint/torch_env`
-- **Python**: 3.12+
+### 核心套件版本：
+
+* torch==2.2.2
+* torchvision==0.17.2
+* timm==0.6.5 (預訓練權重來源)
+* einops==0.8.1 (Transformer 張量操作)
+* albumentations==1.3.0 (影像增強)
+* facenet-pytorch==2.6.0 (MTCNN 臉部偵測)
+
