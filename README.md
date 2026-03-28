@@ -38,19 +38,20 @@
 
 ---
 ## Pipeline
-### 資料預處理 (Preprocessing)
-臉部偵測與裁剪：
-使用 MTCNN 偵測影片中的人臉影格並儲存為圖片。
 
-```bash
-python preprocessing/detect_faces.py --data_path ./raw_videos --dataset FACEFORENSICS
-python preprocessing/extract_crops.py --data_path ./raw_videos --output_path ./face_crops
-```
-資料集分配：
-執行 organize_dataset.py 將圖片依照 splits/ 中的 JSON 標籤分配到 train/val/test 資料夾。
+### 資料預處理 (Preprocessing)
+*   **臉部偵測與裁剪**：
+  使用 MTCNN 偵測影片中的人臉影格並儲存為圖片。
+  
+  ```bash
+  python preprocessing/detect_faces.py --data_path ./raw_videos --dataset FACEFORENSICS
+  python preprocessing/extract_crops.py --data_path ./raw_videos --output_path ./face_crops
+  ```
+
+*   **資料集分配**：
+  執行 organize_dataset.py 將圖片依照 splits/ 中的 JSON 標籤分配到 train/val/test 資料夾。
 
 ### 模型訓練 (Training)
-本專案提供兩種模型架構，定義於各目錄的 model.py 中。
 
 Cross-Attention 版本 :
 
@@ -58,12 +59,15 @@ Cross-Attention 版本 :
 cd cross_xception_vit
 python train.py --config architecture.yaml
 ```
+
 ### 效能評估 (Testing)
+
 評估模型在測試集上的 AUC 與 LogLoss。
 
 ```bash
 python test.py --config architecture.yaml --dataset All
 ```
+
 ## 參考資料
 
 *   **資料集 (Dataset)**: [FaceForensics++: Learning to Detect Manipulated Facial Images](https://github.com/ondyari/FaceForensics)
