@@ -27,8 +27,20 @@
 
 > **注意**：預處理腳本 `preprocessing/detect_faces.py` 中的 `--dataset` 參數預設支援 `FACEFORENSICS` 格式。
 
+### 資料增強策略 (Data Augmentation)
+
+為了提升模型在不同影片品質下的泛化能力，使用 `albumentations` 實作了自定義的增強流程：
+
+| 技術名稱 | 實作功能 | 目的 |
+| :--- | :--- | :--- |
+| **IsotropicResize** | 等比例縮放至 299x299 | 維持臉部幾何特徵不變形 |
+| **RandomBrightnessContrast** | 隨機亮度與對比度調整 | 模擬不同的攝影環境光影 |
+| **ImageCompression** | 隨機 JPEG/WebP 壓縮 | 模擬社交媒體傳輸後的畫質損失 |
+| **HorizontalFlip** | 水平翻轉 | 增加樣本多樣性，防止方位依賴 |
+| **Normalize** | ImageNet 標準化 | 加速模型收斂 |
+
 ---
-## 3. Pipeline
+## Pipeline
 ### 資料預處理 (Preprocessing)
 臉部偵測與裁剪：
 使用 MTCNN 偵測影片中的人臉影格並儲存為圖片。
