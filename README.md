@@ -21,19 +21,9 @@
 
 本專案主要使用 **FaceForensics++ (FF++)** 資料集進行實驗與驗證。我們針對資料集進行了嚴謹的劃分與欠取樣（Under-sampling）策略：
 
-*   **五種偽造技術**：包含 DeepFakes, Face2Face, FaceSwap, NeuralTextures 以及高保真度的 FaceShifter[cite: 2]。
-*   **資料集分割**：依據標準劃分，包含 720 支訓練影片、140 支驗證影片以及 140 支測試影片[cite: 2]。
-*   **真偽平衡 (1:1)**：為解決資料不平衡問題，訓練集從真實與偽造影片中均勻取樣，最終確保訓練、驗證與測試皆維持 1:1 的真偽影像比例（訓練集共 43,200 張影像）[cite: 2]。
-
-## 資料集來源 (Dataset Sources)
-
-| 資料集名稱 | 描述 | 來源連結 |
-| :--- | :--- | :--- |
-| **FaceForensics++ (FF++)** | 包含 1000 份原始影片及其使用四種不同技術（Deepfakes, Face2Face, FaceSwap, NeuralTextures）生成的偽造版本。 | [GitHub Repo](https://github.com/ondyari/FaceForensics) |
-| **Celeb-DF (v2)** | 包含從 YouTube 提取的真實與合成的明星臉部影片，具有較高的視覺品質。 | [Official Site](https://github.com/yuezunli/celeb-deepfakeforensics) |
-| **Deepfake Detection Challenge (DFDC)** | 由 Facebook 發起的大規模資料集，包含多樣化的背景與光照條件。 | [Kaggle DFDC](https://www.kaggle.com/c/deepfake-detection-challenge) |
-
-> **注意**：預處理腳本 `preprocessing/detect_faces.py` 中的 `--dataset` 參數預設支援 `FACEFORENSICS` 格式。
+*   **五種偽造技術**：包含 DeepFakes, Face2Face, FaceSwap, NeuralTextures 以及高保真度的 FaceShifter。
+*   **資料集分割**：依據標準劃分，包含 720 支訓練影片、140 支驗證影片以及 140 支測試影片。
+*   **真偽平衡 (1:1)**：為解決資料不平衡問題，訓練集從真實與偽造影片中均勻取樣，最終確保訓練、驗證與測試皆維持 1:1 的真偽影像比例（訓練集共 43,200 張影像）。
 
 ### 資料增強策略 (Data Augmentation)
 
