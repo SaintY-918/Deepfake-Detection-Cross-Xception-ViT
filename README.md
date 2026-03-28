@@ -12,10 +12,10 @@
 
 * torch==2.2.2
 * torchvision==0.17.2
-* timm==0.6.5 (預訓練權重來源)
-* einops==0.8.1 (Transformer 張量操作)
-* albumentations==1.3.0 (影像增強)
-* facenet-pytorch==2.6.0 (MTCNN 臉部偵測)
+* timm==0.6.5 
+* einops==0.8.1 
+* albumentations==1.3.0 
+* facenet-pytorch==2.6.0 
 
 ## 資料集來源與處理 (Dataset & Preprocessing)
 
