@@ -31,6 +31,8 @@
 
 為了提升模型在不同影片品質下的泛化能力，使用 `albumentations` 實作了自定義的增強流程：
 
+![fig3_2](https://github.com/user-attachments/assets/2a302a29-7840-43ef-b2c6-324d81349f07)
+
 | 技術名稱 | 實作功能 | 目的 |
 | :--- | :--- | :--- |
 | **IsotropicResize** | 等比例縮放至 299x299 | 維持臉部幾何特徵不變形 |
