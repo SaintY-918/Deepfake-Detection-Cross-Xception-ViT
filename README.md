@@ -52,19 +52,6 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 透過此機制，模型能強化對隱蔽偽造痕跡的捕捉能力，確保在面對高擬真的 Deepfake 影像時，依然能識別出細微的局部破綻與宏觀的邏輯錯誤。
 
 ---
-## 模型原理簡介
-
-本專案利用 Xception 提取空間特徵，並將特徵圖切分為多個 Patch 傳入 Transformer Encoder。在 Cross Xception ViT 中，我們引入了 Cross-Attention 機制用於融合不同層級的 CNN 特徵，強化模型對局部細微偽造痕跡的捕捉能力。
-
-## 模型架構細節 (Architecture Details)
-
-本專案實作的 `CrossXceptionViT` 採用雙分支設計，分別處理不同尺度的特徵流：
-
-*   **S-Branch (Small-scale)**: 處理 10x10 的特徵圖，專注於提取高解析度的局部細節（如皮膚紋理破綻）。
-*   **L-Branch (Large-scale)**: 處理 38x38 的特徵圖，擁有更廣的感受野，專注於分析全域幾何結構的不一致性。
-*   **Feature Fusion**: 透過 Cross-Attention 機制交換兩分支的資訊，強化模型對隱蔽偽造痕跡的捕捉。
-
----
 ## Pipeline
 
 ### 資料預處理 (Preprocessing)
