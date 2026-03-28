@@ -17,6 +17,14 @@
 * albumentations==1.3.0 (影像增強)
 * facenet-pytorch==2.6.0 (MTCNN 臉部偵測)
 
+## 資料集來源與處理 (Dataset & Preprocessing)
+
+本專案主要使用 **FaceForensics++ (FF++)** 資料集進行實驗與驗證。我們針對資料集進行了嚴謹的劃分與欠取樣（Under-sampling）策略：
+
+*   **五種偽造技術**：包含 DeepFakes, Face2Face, FaceSwap, NeuralTextures 以及高保真度的 FaceShifter[cite: 2]。
+*   **資料集分割**：依據標準劃分，包含 720 支訓練影片、140 支驗證影片以及 140 支測試影片[cite: 2]。
+*   **真偽平衡 (1:1)**：為解決資料不平衡問題，訓練集從真實與偽造影片中均勻取樣，最終確保訓練、驗證與測試皆維持 1:1 的真偽影像比例（訓練集共 43,200 張影像）[cite: 2]。
+
 ## 資料集來源 (Dataset Sources)
 
 | 資料集名稱 | 描述 | 來源連結 |
@@ -66,3 +74,7 @@ python train.py --config architecture.yaml
 ```bash
 python test.py --config architecture.yaml --dataset All
 ```
+## 參考資料
+
+*   **資料集 (Dataset)**: [FaceForensics++: Learning to Detect Manipulated Facial Images](https://github.com/ondyari/FaceForensics)
+*   **原始研究 (Base Project)**: [Combining EfficientNet and Vision Transformers for Video Deepfake Detection](https://github.com/davide-coccomini/Combining-EfficientNet-and-Vision-Transformers-for-Video-Deepfake-Detection)
