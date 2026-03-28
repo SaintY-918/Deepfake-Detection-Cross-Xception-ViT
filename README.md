@@ -33,18 +33,10 @@
 
 ![fig3_2](https://github.com/user-attachments/assets/2a302a29-7840-43ef-b2c6-324d81349f07)
 
-| 技術名稱 | 實作功能 | 目的 |
-| :--- | :--- | :--- |
-| **IsotropicResize** | 等比例縮放至 299x299 | 維持臉部幾何特徵不變形 |
-| **RandomBrightnessContrast** | 隨機亮度與對比度調整 | 模擬不同的攝影環境光影 |
-| **ImageCompression** | 隨機 JPEG/WebP 壓縮 | 模擬社交媒體傳輸後的畫質損失 |
-| **HorizontalFlip** | 水平翻轉 | 增加樣本多樣性，防止方位依賴 |
-| **Normalize** | ImageNet 標準化 | 加速模型收斂 |
-
 ---
 ## 模型原理簡介
 
-本專案利用 Xception 提取空間特徵，並將特徵圖切分為多個 Patch 傳入 Transformer Encoder。在 cross_xception_vit 中，我們引入了 Cross-Attention 機制：$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$用於融合不同層級的 CNN 特徵，強化模型對局部細微偽造痕跡的捕捉能力。
+本專案利用 Xception 提取空間特徵，並將特徵圖切分為多個 Patch 傳入 Transformer Encoder。在 cross_xception_vit 中，我們引入了 Cross-Attention 機制用於融合不同層級的 CNN 特徵，強化模型對局部細微偽造痕跡的捕捉能力。
 
 ---
 ## Pipeline
