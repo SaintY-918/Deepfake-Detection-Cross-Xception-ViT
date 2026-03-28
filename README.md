@@ -50,16 +50,16 @@
 
 *   **資料集分配**：
   執行 organize_dataset.py 將圖片依照 splits/ 中的 JSON 標籤分配到 train/val/test 資料夾。
-
+---
 ### 模型訓練 (Training)
 
-Cross-Attention 版本 :
+*   **Cross-Attention 版本** :
 
-```bash
-cd cross_xception_vit
-python train.py --config architecture.yaml
-```
-
+  ```bash
+  cd cross_xception_vit
+  python train.py --config architecture.yaml
+  ```
+---
 ### 效能評估 (Testing)
 
 評估模型在測試集上的 AUC 與 LogLoss。
