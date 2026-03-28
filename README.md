@@ -4,7 +4,7 @@
 
 ---
 
-## 1. 環境設定 (Environment Setup)
+## 環境設定 (Environment Setup)
 
 本專案建議在 **Windows WSL (Ubuntu 24.04)** 環境下執行，並使用專屬的虛擬環境。
 
@@ -17,7 +17,7 @@
 * albumentations==1.3.0 (影像增強)
 * facenet-pytorch==2.6.0 (MTCNN 臉部偵測)
 
-## 2. 資料集來源 (Dataset Sources)
+## 資料集來源 (Dataset Sources)
 
 | 資料集名稱 | 描述 | 來源連結 |
 | :--- | :--- | :--- |
@@ -49,7 +49,7 @@ Cross-Attention 版本 :
 cd cross_xception_vit
 python train.py --config architecture.yaml
 ```
-第三步：效能評估 (Testing)
+### 效能評估 (Testing)
 評估模型在測試集上的 AUC 與 LogLoss。
 
 ```bash
